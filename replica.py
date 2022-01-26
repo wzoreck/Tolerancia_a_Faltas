@@ -10,6 +10,7 @@ traidor = False
 replicas = []
 porta = 0
 novo_saldo = 0
+resultados = []
 
 
 def validar_operacao(operacao):
@@ -29,16 +30,16 @@ def validar_operacao(operacao):
     
     print(f'Novo saldo: {novo_saldo}')
 
-def notifica_criacao_replica(porta):
+def notifica_principal(mensagem):
     socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     destino = ('127.0.0.1', settings.PORTA_PRINCIPAL)
-    mensagem = json.dumps({'nova_replica': porta})
+    
     try:
         socket_notificacao.connect(destino)
         socket_notificacao.send(mensagem.encode('UTF-8'))
         socket_notificacao.close()
     except:
-        print('Erro ao notificar criacao de réplica!')
+        print('Erro ao notificar processo principal!')
 
 def envia_mensagem_replicas(mensagem):
     global replicas
@@ -63,6 +64,7 @@ def main():
     global porta
     global traidor
     global replicas
+    global resultados
     
     argumentos = sys.argv
     socket_replica = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,7 +75,7 @@ def main():
     else:
         porta = random.randint(2000, 3000)
         socket_replica.bind(('127.0.0.1', porta))
-        notifica_criacao_replica(porta)
+        notifica_principal(json.dumps({'nova_replica': porta}))
 
     if 'traidor' in argumentos:
         traidor = True
@@ -111,9 +113,19 @@ def main():
                     envia_mensagem_replicas(json.dumps(mensagem))
                 else:
                     envia_mensagem_replicas(json.dumps({'novo_saldo': novo_saldo, 'origem': porta}))
+                    notifica_principal(json.dumps({'novo_saldo': novo_saldo, 'origem': porta}))
                     
             if 'novo_saldo' in mensagem:
-                print(mensagem)
+                resultados.append(mensagem)
+                
+                if len(resultados) == len(replicas) - 1:
+                    for resultado in resultados:
+                        if resultado['novo_saldo'] == novo_saldo:
+                            pass
+                        else:
+                            pass
+            
+            print(resultados)
                     
         except:
             print('Não possível decodificar a mensagem!')
