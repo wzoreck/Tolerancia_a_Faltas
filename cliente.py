@@ -1,7 +1,7 @@
 import json
 import socket
 import random
-import requests
+import settings
 
 
 '''
@@ -15,15 +15,27 @@ operacao = {
 
 
 def requisita_transacao(transacao):
-    print(transacao)
+    transacao = json.dumps(transacao).encode('UTF-8')
+    
+    try: 
+        socket_cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket_cliente.bind(('127.0.0.1', random.randint(1000, 2000)))
+        
+        destino = ('127.0.0.1', settings.PORTA_PRINCIPAL)
+        socket_cliente.connect(destino)
+        socket_cliente.send(transacao)
+
+        socket_cliente.close()
+        return True
+    except:
+        return False
+
 
 
 def main():
     saldo = 0.0
+    id_atual = 1
     transacao = {}
-
-    socket_cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    socket_cliente.bind(('127.0.0.1', random.randint(1000, 2000)))
 
     while True: 
         print('-------------------------------------------------')
@@ -38,12 +50,22 @@ def main():
         try:
             valor = float(valor)
 
+            transacao = {
+                'id': id_atual,
+                'valor': valor,
+            }
+
             if escolha == '1':
-                saldo += valor
+                transacao['operacao'] = 'debito'
+                requisita_transacao(transacao)
             elif escolha == '2':
-                saldo -= valor
+                transacao['operacao'] = 'credito'
+                requisita_transacao(transacao)
             else:
                 print('Opção não disponível, tente novamente.')
+
+
+            id_atual += 1
         except:
             print('Valor inválido!')
     
