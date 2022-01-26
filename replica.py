@@ -89,7 +89,11 @@ def main():
                 envia_mensagem_replicas(json.dumps({'replicas': replicas}))
             
             if 'replicas' in mensagem:
-                print(f'Replicas recebidas: {mensagem["replicas"]}')
+                for replica in mensagem['replicas']:
+                    if not replica in replicas:
+                        replicas.append(replica)
+                
+                print(f'Replicas: {replicas}')
 
             if 'operacao' in mensagem:
                 validar_operacao(mensagem)
