@@ -5,14 +5,17 @@ import random
 import settings
 from datetime import datetime
 
-
+principal = False
 traidor = False
 replicas = []
 porta = 0
+novo_saldo = 0
 
 
 def validar_operacao(operacao):
-    novo_saldo = 0
+    global novo_saldo
+    global traidor
+    
     if traidor:
         if operacao['operacao'] == 'debito':
             novo_saldo =  operacao['saldo'] + operacao['valor']
@@ -25,8 +28,6 @@ def validar_operacao(operacao):
             novo_saldo = operacao['saldo'] + operacao['valor']
     
     print(f'Novo saldo: {novo_saldo}')
-    
-    envia_mensagem_replicas(json.dumps(operacao))
 
 def notifica_criacao_replica(porta):
     socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,25 +41,34 @@ def notifica_criacao_replica(porta):
         print('Erro ao notificar criacao de réplica!')
 
 def envia_mensagem_replicas(mensagem):
+    global replicas
+    
     for replica in replicas:
         if not replica == porta:
-            socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            socket_replicacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             destino = ('127.0.0.1', replica)
             
             try:
-                socket_notificacao.connect(destino)
-                socket_notificacao.send(mensagem.encode('UTF-8'))
+                socket_replicacao.connect(destino)
+                socket_replicacao.send(mensagem.encode('UTF-8'))
             except:
                 print('Erro ao notificar réplicas!')
             
-            socket_notificacao.close()
+            socket_replicacao.close()
             
 
 def main():
+    global principal
+    global novo_saldo
+    global porta
+    global traidor
+    global replicas
+    
     argumentos = sys.argv
     socket_replica = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     if 'principal' in argumentos:
+        principal = True
         socket_replica.bind(('127.0.0.1', settings.PORTA_PRINCIPAL))
     else:
         porta = random.randint(2000, 3000)
@@ -97,6 +107,14 @@ def main():
 
             if 'operacao' in mensagem:
                 validar_operacao(mensagem)
+                if principal:
+                    envia_mensagem_replicas(json.dumps(mensagem))
+                else:
+                    envia_mensagem_replicas(json.dumps({'novo_saldo': novo_saldo, 'origem': porta}))
+                    
+            if 'novo_saldo' in mensagem:
+                print(mensagem)
+                    
         except:
             print('Não possível decodificar a mensagem!')
         
