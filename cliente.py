@@ -53,6 +53,7 @@ def main():
             transacao = {
                 'id': id_atual,
                 'valor': valor,
+                'saldo': saldo,
             }
 
             if escolha == '1':

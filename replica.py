@@ -8,10 +8,25 @@ from datetime import datetime
 
 traidor = False
 replicas = []
+porta = 0
 
 
 def validar_operacao(operacao):
-    return True
+    novo_saldo = 0
+    if traidor:
+        if operacao['operacao'] == 'debito':
+            novo_saldo =  operacao['saldo'] + operacao['valor']
+        if operacao['operacao'] == 'credito':
+            novo_saldo = operacao['saldo'] - operacao['valor']
+    else:
+        if operacao['operacao'] == 'debito':
+            novo_saldo = operacao['saldo'] - operacao['valor']
+        if operacao['operacao'] == 'credito':
+            novo_saldo = operacao['saldo'] + operacao['valor']
+    
+    print(f'Novo saldo: {novo_saldo}')
+    
+    envia_mensagem_replicas(json.dumps(operacao))
 
 def notifica_criacao_replica(porta):
     socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,20 +39,19 @@ def notifica_criacao_replica(porta):
     except:
         print('Erro ao notificar criacao de réplica!')
 
-def envia_replicas():
-    mensagem = json.dumps({'replicas': replicas})
-    
+def envia_mensagem_replicas(mensagem):
     for replica in replicas:
-        socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        destino = ('127.0.0.1', replica)
-        
-        try:
-            socket_notificacao.connect(destino)
-            socket_notificacao.send(mensagem.encode('UTF-8'))
-        except:
-            print('Erro ao notificar réplicas!')
-        
-        socket_notificacao.close()
+        if not replica == porta:
+            socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            destino = ('127.0.0.1', replica)
+            
+            try:
+                socket_notificacao.connect(destino)
+                socket_notificacao.send(mensagem.encode('UTF-8'))
+            except:
+                print('Erro ao notificar réplicas!')
+            
+            socket_notificacao.close()
             
 
 def main():
@@ -72,12 +86,13 @@ def main():
             if 'nova_replica' in mensagem:
                 print(f'Nova réplica: {mensagem["nova_replica"]}')
                 replicas.append(mensagem["nova_replica"])
-                envia_replicas()
+                envia_mensagem_replicas(json.dumps({'replicas': replicas}))
             
             if 'replicas' in mensagem:
                 print(f'Replicas recebidas: {mensagem["replicas"]}')
 
-            validar_operacao(mensagem)
+            if 'operacao' in mensagem:
+                validar_operacao(mensagem)
         except:
             print('Não possível decodificar a mensagem!')
         
