@@ -5,6 +5,7 @@ import random
 import settings
 from datetime import datetime
 
+
 principal = False
 traidor = False
 replicas = []
@@ -31,6 +32,7 @@ def validar_operacao(operacao):
     
     print(f'Novo saldo: {novo_saldo}')
 
+
 def notifica_processo(mensagem, destino):
     socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
@@ -40,6 +42,7 @@ def notifica_processo(mensagem, destino):
         socket_notificacao.close()
     except:
         print('Erro ao notificar processo principal!')
+
 
 def envia_mensagem_replicas(mensagem):
     global replicas
@@ -81,7 +84,7 @@ def main():
     if 'traidor' in argumentos:
         traidor = True
 
-    print('Servidor iniciado, <Ctr + C> para pará-lo.')
+    print('\nServidor iniciado, <Ctr + C> para pará-lo.')
     socket_replica.listen()
     
     while True:
@@ -90,7 +93,8 @@ def main():
 
         data_conexao = datetime.now()
         data_conexao = data_conexao.strftime('%d-%m-%Y %H:%M:%S')
-        print(f'[{data_conexao}] - Cliente conectado => {endereco[0]}:{endereco[1]}')
+        print('\n-------------------------------------------------')
+        print(f'[{data_conexao}] - Nova conexão => {endereco[0]}:{endereco[1]}')
 
         try:
             mensagem = mensagem.decode('UTF-8')
@@ -121,6 +125,8 @@ def main():
                     resultados.append(mensagem)
                     acordo = True
                     
+                    print(f'Resultados recebidos: {resultados}')
+                    
                     if len(resultados) == len(replicas) - 1:
                         for resultado in resultados:
                             if resultado['novo_saldo'] != novo_saldo:
@@ -129,7 +135,7 @@ def main():
                                 break
                             
                         notifica_processo(json.dumps({'acordo': acordo}), ('127.0.0.1', settings.PORTA_PRINCIPAL))
-                        resultados = []
+                        resultados = []     
             
             if 'acordo' in mensagem:
                 print(f'Acordo: {mensagem}')
@@ -149,12 +155,10 @@ def main():
                         
                     notifica_processo(json.dumps(resultado_final), ('127.0.0.1', settings.PORTA_CLIENTE))
                     acordos = []
-            
-            print(resultados)
                     
         except:
             print('Não possível decodificar a mensagem!')
         
-
+        
 if __name__ == '__main__':
     main()

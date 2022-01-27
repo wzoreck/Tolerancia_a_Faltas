@@ -3,18 +3,10 @@ import socket
 import random
 import settings
 from threading import Thread
+from time import sleep
 
 
-'''
-Estrutura da Operação
-operacao = {
-    'id': 1,
-    'operacao': 'debito/credito',
-    'valor': 100,
-}
-'''
 saldo = 0.0
-
 
 
 def requisita_transacao(transacao):
@@ -45,14 +37,11 @@ def thread_escuta(socket_thread):
         if mensagem['status']:
             try:
                 saldo = float(mensagem['saldo_atualizado'])
-                print('-------------------------------------------------')
-                print(f'Saldo: R$ {saldo}\n')
             except:
                 print('Erro ao atualizar saldo!')
         else:
             print('\nTransacão não realizada!')
-        
-        # print(mensagem)
+
 
 def main():
     global saldo
@@ -64,14 +53,15 @@ def main():
     
     Thread(target=thread_escuta, args=[socket_resultado]).start()
 
-    while True: 
-        print('-------------------------------------------------')
+    while True:
+        sleep(1)
+        print('\n-------------------------------------------------')
         print(f'Saldo: R$ {saldo}\n')
 
         print('1 - Débito')
         print('2 - Crédito')
 
-        escolha = input('Informe o número da operação desejada: ')
+        escolha = input('\nInforme o número da operação desejada: ')
         valor = input('Informe o valor: ')
 
         try:
@@ -96,8 +86,7 @@ def main():
             id_atual += 1
         except:
             print('Valor inválido!')
-    
-        print('\n')
+
 
 if __name__ == '__main__':
     main()
