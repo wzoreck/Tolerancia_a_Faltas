@@ -2,6 +2,7 @@ import json
 import socket
 import random
 import settings
+from threading import Thread
 
 
 '''
@@ -12,6 +13,8 @@ operacao = {
     'valor': 100,
 }
 '''
+saldo = 0.0
+
 
 
 def requisita_transacao(transacao):
@@ -31,11 +34,35 @@ def requisita_transacao(transacao):
         return False
 
 
+def thread_escuta(socket_thread):
+    global saldo
+    socket_thread.listen()
+    
+    while True:
+        socket_principal, endereco = socket_thread.accept()
+        mensagem = socket_principal.recv(1024)
+        mensagem = json.loads(mensagem.decode('UTF-8'))
+        if mensagem['status']:
+            try:
+                saldo = float(mensagem['saldo_atualizado'])
+                print('-------------------------------------------------')
+                print(f'Saldo: R$ {saldo}\n')
+            except:
+                print('Erro ao atualizar saldo!')
+        else:
+            print('\nTransacão não realizada!')
+        
+        # print(mensagem)
 
 def main():
-    saldo = 0.0
+    global saldo
     id_atual = 1
     transacao = {}
+
+    socket_resultado = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    socket_resultado.bind(('127.0.0.1', settings.PORTA_CLIENTE))
+    
+    Thread(target=thread_escuta, args=[socket_resultado]).start()
 
     while True: 
         print('-------------------------------------------------')

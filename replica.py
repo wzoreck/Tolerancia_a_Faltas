@@ -11,6 +11,7 @@ replicas = []
 porta = 0
 novo_saldo = 0
 resultados = []
+acordos = []
 
 
 def validar_operacao(operacao):
@@ -30,9 +31,8 @@ def validar_operacao(operacao):
     
     print(f'Novo saldo: {novo_saldo}')
 
-def notifica_principal(mensagem):
+def notifica_processo(mensagem, destino):
     socket_notificacao = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    destino = ('127.0.0.1', settings.PORTA_PRINCIPAL)
     
     try:
         socket_notificacao.connect(destino)
@@ -65,6 +65,7 @@ def main():
     global traidor
     global replicas
     global resultados
+    global acordos
     
     argumentos = sys.argv
     socket_replica = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -75,7 +76,7 @@ def main():
     else:
         porta = random.randint(2000, 3000)
         socket_replica.bind(('127.0.0.1', porta))
-        notifica_principal(json.dumps({'nova_replica': porta}))
+        notifica_processo(json.dumps({'nova_replica': porta}), ('127.0.0.1', settings.PORTA_PRINCIPAL))
 
     if 'traidor' in argumentos:
         traidor = True
@@ -113,17 +114,41 @@ def main():
                     envia_mensagem_replicas(json.dumps(mensagem))
                 else:
                     envia_mensagem_replicas(json.dumps({'novo_saldo': novo_saldo, 'origem': porta}))
-                    notifica_principal(json.dumps({'novo_saldo': novo_saldo, 'origem': porta}))
-                    
-            if 'novo_saldo' in mensagem:
-                resultados.append(mensagem)
+                    notifica_processo(json.dumps({'novo_saldo': novo_saldo, 'origem': porta}), ('127.0.0.1', settings.PORTA_PRINCIPAL))
                 
-                if len(resultados) == len(replicas) - 1:
-                    for resultado in resultados:
-                        if resultado['novo_saldo'] == novo_saldo:
-                            pass
-                        else:
-                            pass
+            if not principal:
+                if 'novo_saldo' in mensagem:
+                    resultados.append(mensagem)
+                    acordo = True
+                    
+                    if len(resultados) == len(replicas) - 1:
+                        for resultado in resultados:
+                            if resultado['novo_saldo'] != novo_saldo:
+                                print('FALHA: Não houve acordo!')
+                                acordo = False
+                                break
+                            
+                        notifica_processo(json.dumps({'acordo': acordo}), ('127.0.0.1', settings.PORTA_PRINCIPAL))
+                        resultados = []
+            
+            if 'acordo' in mensagem:
+                print(f'Acordo: {mensagem}')
+                acordos.append(mensagem)
+                
+                if len(acordos) == len(replicas):
+                    acordo_aux = True
+                    for acordo in acordos:
+                        if not acordo['acordo']:
+                            acordo_aux = False
+                            break
+                    
+                    # Notifica usuário
+                    resultado_final = {'status': acordo_aux}
+                    if acordo_aux:
+                        resultado_final['saldo_atualizado'] = novo_saldo
+                        
+                    notifica_processo(json.dumps(resultado_final), ('127.0.0.1', settings.PORTA_CLIENTE))
+                    acordos = []
             
             print(resultados)
                     
